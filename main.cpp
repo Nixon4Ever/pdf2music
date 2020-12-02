@@ -87,22 +87,54 @@ int main(int argc, char** argv)
 				layout.readNewStaffLine(y);
 			}
 		}
-		// debug staff lines
+		// Find Staff left/right
+		for (int x = (int)((float)w * .15f); x > 0; x--) {
+			if (!isBlack(opencvImage.at<cv::Vec3b>(layout.staves[0].lines[1].y, x)) || !isBlack(opencvImage.at<cv::Vec3b>(layout.staves[0].lines[2].y, x))) {
+				layout.staffLeft = x + 1;
+				break;
+			}
+		}
+		for (int x = (int)((float)w * .85f); x < w; x++) {
+			if (!isBlack(opencvImage.at<cv::Vec3b>(layout.staves[0].lines[1].y, x)) || !isBlack(opencvImage.at<cv::Vec3b>(layout.staves[0].lines[2].y, x))) {
+				layout.staffRight = x - 1;
+				break;
+			}
+		}
+		// remove staff lines
 		for (int staveNum = 0; staveNum < layout.staves.size(); staveNum++) {
 			staff& staffRef = layout.staves[staveNum];
-			//printf("Staff: %d\n", staveNum);
 			for (int lineNum = 0; lineNum < staffRef.lines.size(); lineNum++) {
 				staffLine& lineRef = staffRef.lines[lineNum];
-				//printf("StaffLine: %d: %d (%d,%d,%d)\n", lineNum, lineRef.y, staveNum * 30 + 10, lineNum * 30,200);
-					for (int x = (int)((float)w * .15f); x < (int)((float)w * .85f); x++) {
+				for (int x = layout.staffLeft; x <= layout.staffRight; x++) {
+					if (!isBlack(opencvImage.at<cv::Vec3b>(lineRef.y - 1, x)) && !isBlack(opencvImage.at<cv::Vec3b>(lineRef.y + lineRef.height + 1, x))) {
 						for (int y = lineRef.y; y < lineRef.y + lineRef.height; y++) {
-							//debugImage.at<cv::Vec3b>(y, x) = cv::Vec3b(staveNum * 30 + 10, lineNum * 30, 200);//COLOR DEBUG
+							opencvImage.at<cv::Vec3b>(y, x) = cv::Vec3b(255, 255, 255);// Remove staff
 						}
 					}
 				}
 			}
 		}
+		debugImage = opencvImage;
+		displayImage = debugImage(roi);
+		// detect measures (assume double staff for now)
+		for (int staveNum = 0; staveNum < layout.staves.size(); staveNum += 2) {
+			staff& upperStaff = layout.staves[staveNum];
+			staff& lowerStaff = layout.staves[staveNum + 1];
+			int upperY = upperStaff.lines[0].y;
+			int lowerY = lowerStaff.lines[4].y + lowerStaff.lines[4].height - 1;
+			for (int x = layout.staffLeft; x <= layout.staffRight; x++) {
+				bool isMeasure = true;
+				for (int y = upperY; y <= lowerY; y++) {
+					if (!isBlack(opencvImage.at<cv::Vec3b>(y, x))) {
+						isMeasure = false;
+						break;
+					}
+				}
+				if (isMeasure) {
 
+				}
+			}
+		}
 		// exit
 		cv::waitKey();
 	}
